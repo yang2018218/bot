@@ -3,18 +3,13 @@ package wechatbot
 import (
 	"context"
 	"fmt"
-	"os"
-	"wechatbot/internal/pkg/code"
 	genericoptions "wechatbot/internal/pkg/options"
 	genericapiserver "wechatbot/internal/pkg/server"
-	"wechatbot/internal/pkg/utils/barkutil"
 	"wechatbot/internal/wechatbot/config"
 	"wechatbot/internal/wechatbot/schedule"
 	"wechatbot/internal/wechatbot/service"
 	srv "wechatbot/internal/wechatbot/service"
-	"wechatbot/internal/wechatbot/store"
 	"wechatbot/internal/wechatbot/store/postgres"
-	"wechatbot/internal/wechatbot/store/redis"
 	"wechatbot/pkg/log"
 	"wechatbot/pkg/shutdown"
 	"wechatbot/pkg/shutdown/shutdownmanagers/posixsignal"
@@ -107,26 +102,26 @@ func (s *apiServer) PrepareRun() preparedAPIServer {
 func (s preparedAPIServer) Run() error {
 	// 项目数据初始化
 	storeIns, _ := postgres.GetPostgreStore(nil)
-	// 数据库脚本
-	if config.GCfg.PostgresOptions.FlywayPath != "" {
-		if config.GCfg.GenericServerRunOptions.Runtime == code.RuntimeK8S {
-			if config.GCfg.PostgresOptions.FlywayPath != "" {
-				flyways, errFlyway := postgres.Migrate(storeIns.DB().Debug(), config.GCfg.PostgresOptions.FlywayPath)
-				msg := config.GCfg.PostgresOptions.FlywayPath
-				if errFlyway != nil {
-					msg += fmt.Sprintf(" failed:%s", errFlyway.Error())
-				} else {
-					msg += fmt.Sprintf(" succeed %v file(s)", len(flyways))
-				}
-				barkutil.SendMsg("post-install-flyway", msg)
-				os.Exit(0)
-			}
-		} else {
-			postgres.Migrate(storeIns.DB().Debug(), config.GCfg.PostgresOptions.FlywayPath)
-		}
-	}
-	cacheIns, _ := redis.GetRedisCache(nil)
-	storeIns.SetCache(cacheIns)
+	// // 数据库脚本
+	// if config.GCfg.PostgresOptions.FlywayPath != "" {
+	// 	if config.GCfg.GenericServerRunOptions.Runtime == code.RuntimeK8S {
+	// 		if config.GCfg.PostgresOptions.FlywayPath != "" {
+	// 			flyways, errFlyway := postgres.Migrate(storeIns.DB().Debug(), config.GCfg.PostgresOptions.FlywayPath)
+	// 			msg := config.GCfg.PostgresOptions.FlywayPath
+	// 			if errFlyway != nil {
+	// 				msg += fmt.Sprintf(" failed:%s", errFlyway.Error())
+	// 			} else {
+	// 				msg += fmt.Sprintf(" succeed %v file(s)", len(flyways))
+	// 			}
+	// 			barkutil.SendMsg("post-install-flyway", msg)
+	// 			os.Exit(0)
+	// 		}
+	// 	} else {
+	// 		postgres.Migrate(storeIns.DB().Debug(), config.GCfg.PostgresOptions.FlywayPath)
+	// 	}
+	// }
+	// cacheIns, _ := redis.GetRedisCache(nil)
+	// storeIns.SetCache(cacheIns)
 	service := srv.NewService(storeIns)
 	err := service.Init()
 	if err != nil {
@@ -182,17 +177,17 @@ func (c *completedExtraConfig) New() (*grpcAPIServer, error) {
 	opts := []grpc.ServerOption{grpc.MaxRecvMsgSize(c.MaxMsgSize)}
 	grpcServer := grpc.NewServer(opts...)
 
-	storeIns, err := postgres.GetPostgreStore(c.PostgresOptions)
-	store.SetClient(storeIns)
+	// storeIns, err := postgres.GetPostgreStore(c.PostgresOptions)
+	// store.SetClient(storeIns)
 
-	if err != nil {
-		log.Fatalf("Failed to get db instance: %s", err.Error())
-	}
+	// if err != nil {
+	// 	log.Fatalf("Failed to get db instance: %s", err.Error())
+	// }
 
-	_, err = redis.GetRedisCache(c.RedisOptions)
-	if err != nil {
-		log.Fatalf("Failed to get cache instance: %s", err.Error())
-	}
+	// _, err = redis.GetRedisCache(c.RedisOptions)
+	// if err != nil {
+	// 	log.Fatalf("Failed to get cache instance: %s", err.Error())
+	// }
 
 	reflection.Register(grpcServer)
 
