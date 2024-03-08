@@ -1,0 +1,8 @@
+{
+  "go.toolsEnvVars": {
+    "GOPROXY": "https://goproxy.cn,direct"
+  },
+  "terminal.integrated.env.windows": {
+    "GOPROXY": "https://goproxy.cn,direct"
+  }
+}

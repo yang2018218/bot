@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.apiServer.name }}
+  name: {{ .Values.apiServer.name }}
+spec:
+  selector:
+    matchLabels:
+      app: ms-go
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0  # 是一个指定在更新过程中可能处于不可用状态的 Pod 的最大数量或百分比。这里设置为 0 表示在更新过程中，始终都会有可用的 Pod。
+      maxSurge: 1 # 是一个指定在更新过程中可以超过所需数量的 Pod 的最大数量或百分比。这里设置为 1 表示可以先启动一个新的 Pod，并等待其变为 Ready 状态后，再停止旧的 Pod。
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ms-go
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.imageCredentials.name }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 5 # 优雅关闭时间
+      containers:
+      - name: apiserver
+        # image: registry-vpc.cn-shanghai.aliyuncs.com/iunc/micro_service:go_2.0.0
+        image: "{{ .Values.apiServer.image.repository }}:{{ .Values.apiServer.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.apiServer.service.https.targetPort}}
+          name: secure
+          protocol: TCP
+        - containerPort: {{ .Values.apiServer.service.http.targetPort}}
+          name: insecure
+          protocol: TCP
+        - containerPort: {{ .Values.apiServer.service.rpc.targetPort}}
+          name: rpc 
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.apiServer.service.http.targetPort}}
+            scheme: HTTP
+          {{- toYaml .Values.livenessProbe| nindent 10 }}
+        readinessProbe: #就绪探针
+          httpGet:
+            path: /healthz
+            port: {{ .Values.apiServer.service.http.targetPort}}
+            scheme: HTTP
+          {{- toYaml .Values.livenessProbe| nindent 10 }}
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.apiServer.service.http.targetPort}}
+            scheme: HTTP
+          {{- toYaml .Values.startupProbe| nindent 10 }}
+        {{- if not .Values.resourcesEnable }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
+        volumeMounts:
+            - name: logs-volume
+              mountPath: /app/logs
+            - name: ip2location-db
+              mountPath: /app/ip2location.BIN
+        envFrom:
+            - configMapRef:
+                name: ms-go-conf
+        # terminationMessagePath: /dev/termination-log # Kubernetes中容器终止消息的来源
+        # terminationMessagePolicy: File
+      volumes:
+        - name: logs-volume
+          # emptyDir: {}
+          hostPath:
+            path: /www/ms_go/logs
+            type: DirectoryOrCreate
+        {{- if .Values.ip2location.dbHostPath }}
+        - name: ip2location-db
+          hostPath:
+            path: {{ .Values.ip2location.dbHostPath}}
+            type: File
+        {{- end }}
+        - name: podinfo
+          downwardAPI:
+            items:
+            - path: "labels"
+              fieldRef:
+                fieldPath: metadata.labels
+            - path: "namespace"
+              fieldRef:
+                fieldPath: metadata.namespace
+            - path: "uid"
+              fieldRef:
+                fieldPath: metadata.uid
+            - path: "name"
+              fieldRef:
+                fieldPath: metadata.name
