@@ -1,0 +1,6 @@
+vendor/
+__debug_bin.exe
+internal/**/*.yaml
+log/**/*.log
+storage.json
+setu/

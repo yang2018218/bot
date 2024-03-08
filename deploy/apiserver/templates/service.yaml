@@ -1,0 +1,24 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Values.service.name}}
+spec:
+  selector:
+    app: ms-go
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  {{ if eq .Values.service.type "LoadBalancer" }}
+  loadBalancerIP : {{ .Values.service.loadBalancerIP}}
+  {{- end }}
+  ports:
+  # - protocol: TCP
+  #   targetPort: 9000
+  #   port: 80 # Default port for image
+  - name: https
+    protocol: TCP
+    {{- toYaml .Values.apiServer.service.https| nindent 4 }}
+  - name: http
+    protocol: TCP
+    {{- toYaml .Values.apiServer.service.http| nindent 4 }}
+  - name: rpc
+    protocol: TCP
+    {{- toYaml .Values.apiServer.service.rpc| nindent 4 }}
