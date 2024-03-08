@@ -25,6 +25,7 @@ type PostgresOptions struct {
 
 // NewPostgresOptions create a `zero` value instance.
 func NewPostgresOptions() *PostgresOptions {
+	return &PostgresOptions{}
 	return &PostgresOptions{
 		DSN:        "",
 		Host:       "127.0.0.1",
